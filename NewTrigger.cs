@@ -1,5 +1,4 @@
 using System.Net;
-using System.Web;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
@@ -31,7 +30,7 @@ namespace week2_1
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
-            string name = HttpUtility.ParseQueryString(req.Url.Query)["name"];
+            string name = req.Query["name"];
 
             string requestBody = new StreamReader(req.Body).ReadToEnd();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
