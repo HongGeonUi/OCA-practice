@@ -2,6 +2,10 @@
     "IsEncrypted": false,
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+
+        "AI_Endpoint": "https://api.openai.com/v1/chat/completions",
+        "AI_ApiKey": "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",
+        "AI_Model": "gpt-3.5-turbo"
     }
 }

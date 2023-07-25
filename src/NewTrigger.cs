@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
@@ -20,32 +21,54 @@ namespace week2_1
 
         [Function("NewTrigger")]
 
-        [OpenApiOperation(operationId: "Run", tags: new[] { "name" }, Summary = "The name of the person to use in the greeting.", Description = "This HTTP triggered function returns a person's name.", Visibility = OpenApiVisibilityType.Important)]
-        [OpenApiParameter(name: "name", In = ParameterLocation.Query, Required = true, Type = typeof(string), Summary = "The name of the person to use in the greeting.", Description = "The name of the person to use in the greeting.", Visibility = OpenApiVisibilityType.Important)]
-        [OpenApiResponseWithBody(statusCode: System.Net.HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Summary = "The response", Description = "This returns the response")]
-        [OpenApiResponseWithBody(statusCode: System.Net.HttpStatusCode.InternalServerError, contentType: "text/plain", bodyType: typeof(string), Summary = "The response", Description = "This returns the response")]
+        [OpenApiOperation(operationId: nameof(NewTrigger.Run), tags: new[] { "name" })]
+        [OpenApiRequestBody(contentType: "text/plain", bodyType: typeof(string), Required = true, Description = "The request body")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "text/plain", bodyType: typeof(string), Description = "The OK response")]
 
 
-        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "greetings")] HttpRequestData req)
+        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "completions")] HttpRequestData req)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");
 
-            string name = req.Query["name"];
+            var prompt = req.ReadAsString();
 
-            string requestBody = new StreamReader(req.Body).ReadToEnd();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+            var endpoint = Environment.GetEnvironmentVariable("AI_Endpoint");
+            var apiKey = Environment.GetEnvironmentVariable("AI_ApiKey");
+            var Model = Environment.GetEnvironmentVariable("AI_Model");
+            int MaxTokens = 800;
+            float Temperature = 0.7f;
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+                var requestBody = new
+                {
+                    messages = new[]
+                    {
+                        new {role = "system", content =  "You are a helpful assistant. You are very good at summarizing the given text into 2-3 bullet points."},
+                        new {role = "user", content = prompt}
+                    },
+                    max_tokens = MaxTokens,
+                    model = Model,
+                    temperature = Temperature
+                };
+
+                var content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+                var postRequest = await httpClient.PostAsync(endpoint, content);
+                var result = await postRequest.Content.ReadAsStringAsync();
+                dynamic resultContent = JsonConvert.DeserializeObject<dynamic>(result);
+                string message = resultContent.choices[0].message.content;
+            
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
 
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
-
-            response.WriteString(responseMessage);
+            response.WriteString(message);
 
             return response;
+            }
         }
     }
 }
