@@ -7,5 +7,5 @@
 - Model = "gpt-3.5-turbo"
 
 - 결과
-<img src=./week3_result1.png>
-<img src=./week3_result2.png>
+<img src=./src/week3/week3_result1.png>
+<img src=./src/week3/week3_result2.png>
